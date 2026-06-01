@@ -1,4 +1,5 @@
 import { TUNING } from "./config.js";
+import { clamp } from "./math.js";
 import { Game } from "./state.js";
 import { toast, log, ui } from "./dom.js";
 import { canStore, pickUpCargo, putCargoBack } from "./cargo.js";
@@ -16,8 +17,7 @@ export function registerInputHandlers({
   leavePilotSeat,
   releaseTether,
   findMouseDebrisTarget,
-  fireGrapple,
-  clamp
+  fireGrapple
 }) {
   document.addEventListener("pointerlockchange", () => {
     setPointerLocked(document.pointerLockElement === document.body);

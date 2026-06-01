@@ -1,7 +1,13 @@
-import { TUNING } from "./config.js";
 import { Game, CargoState } from "./state.js";
 import { toast, log } from "./dom.js";
 import { removeAndDispose } from "./scene/dispose.js";
+import {
+  cargoUsed as calculateCargoUsed,
+  canStoreCargo,
+  getProcessingDuration,
+  getProcessorSpeed,
+  getProcessedMaterialYield
+} from "./gameRules.js";
 
 let deps;
 let nextCargoId = 1;
@@ -16,11 +22,11 @@ function requireDeps() {
 }
 
 export function cargoUsed() {
-  return Game.cargo.reduce((sum, c) => sum + c.type.cargoSize, 0);
+  return calculateCargoUsed(Game.cargo);
 }
 
 export function canStore(type) {
-  return cargoUsed() + type.cargoSize <= Game.cargoCapacity;
+  return canStoreCargo(Game.cargo, Game.cargoCapacity, type);
 }
 
 function createCargoMesh(cargo, position) {
@@ -84,10 +90,7 @@ export function startProcessing(cargo) {
   cargo.state = CargoState.PROCESSING;
   Game.carrying = null;
   cargo.progress = 0;
-  cargo.duration = TUNING.processor.durationBase
-    + cargo.type.cargoSize * TUNING.processor.durationCargoSizeMultiplier
-    + cargo.type.mass * TUNING.processor.durationMassMultiplier
-    + cargo.type.danger * TUNING.processor.durationDangerMultiplier;
+  cargo.duration = getProcessingDuration(cargo.type);
   Game.processing = cargo;
   toast(`Processing ${cargo.type.name}`);
   log(`${cargo.type.name} loaded into processor. Larger cargo takes longer.`);
@@ -97,12 +100,12 @@ export function processCargo(dt) {
   const { processor } = requireDeps();
   const cargo = Game.processing;
   if (!cargo) return;
-  const speed = 1 + (Game.processorLevel - 1) * TUNING.processor.speedPerLevel;
+  const speed = getProcessorSpeed(Game.processorLevel);
   cargo.progress += (dt * speed) / cargo.duration;
   processor.material.opacity = 0.6 + Math.sin(Game.elapsed * 10) * 0.25;
   processor.material.transparent = true;
   if (cargo.progress >= 1) {
-    const gained = Math.round(cargo.type.material * (1 + (Game.processorLevel - 1) * TUNING.processor.yieldPerLevel));
+    const gained = getProcessedMaterialYield(cargo.type, Game.processorLevel);
     Game.materials += gained;
     toast(`Processed +${gained} materials`);
     log(`${cargo.type.name} processed into ${gained} materials.`);

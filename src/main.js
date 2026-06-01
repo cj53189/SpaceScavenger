@@ -1,4 +1,6 @@
 import { TUNING, debrisTypes, targetConeRange, targetConeHalfAngle } from "./config.js";
+import { rand, clamp, formatTime } from "./math.js";
+import { chooseDebrisType } from "./debrisRules.js";
 import { ui, miniMapCanvas, miniMapCtx, toast, log } from "./dom.js";
 import { Game, resetGameState } from "./state.js";
 import { registerInputHandlers } from "./input.js";
@@ -60,14 +62,6 @@ const raycaster = new THREE.Raycaster();
 const center = new THREE.Vector2(0, 0);
 const debrisList = [];
 const cargoInteractables = [];
-
-function rand(min, max) { return min + Math.random() * (max - min); }
-function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
-function formatTime(seconds) {
-  const m = Math.floor(seconds / 60).toString().padStart(2, "0");
-  const s = Math.floor(seconds % 60).toString().padStart(2, "0");
-  return `${m}:${s}`;
-}
 
 function setPointerLockFallback(reason) {
   Game.pointerLockDenied = true;
@@ -215,15 +209,6 @@ const targetConeLine = new THREE.Line(
 );
 targetConeLine.visible = false;
 shipGroup.add(targetConeLine);
-
-function chooseDebrisType() {
-  const r = Math.random();
-  if (r > 0.94) return debrisTypes[4];
-  if (r > 0.82) return debrisTypes[3];
-  if (r > 0.62) return debrisTypes[2];
-  if (r > 0.32) return debrisTypes[1];
-  return debrisTypes[0];
-}
 
 function flatDistance(a, b) {
   // Flight gameplay is intentionally flattened to X/Z, even if debris has
@@ -879,8 +864,7 @@ function initializeWorld() {
     leavePilotSeat,
     releaseTether,
     findMouseDebrisTarget,
-    fireGrapple,
-    clamp
+    fireGrapple
   });
 
   window.addEventListener("resize", () => {
