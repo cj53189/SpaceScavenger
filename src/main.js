@@ -37,7 +37,7 @@ const tacticalCamera = new THREE.PerspectiveCamera(46, window.innerWidth / windo
 tacticalCamera.up.set(0, 0, -1);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.8));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 ui.scene.appendChild(renderer.domElement);
 
@@ -666,6 +666,17 @@ function resizeMiniMapCanvas() {
   return { width, height };
 }
 
+function resizeRenderer() {
+  const aspect = window.innerWidth / window.innerHeight;
+  camera.aspect = aspect;
+  camera.updateProjectionMatrix();
+  tacticalCamera.aspect = aspect;
+  tacticalCamera.updateProjectionMatrix();
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  resizeMiniMapCanvas();
+}
+
 function drawMiniMap() {
   const box = ui.miniMap;
   box.style.display = Game.mode === "flight" && Game.running ? "block" : "none";
@@ -825,6 +836,7 @@ function runSelfTests() {
     console.assert(typeof updateTacticalCamera === "function", "updateTacticalCamera exists");
     console.assert(typeof mouseWorldOnFlightPlane === "function", "mouseWorldOnFlightPlane exists");
     console.assert(typeof resizeMiniMapCanvas === "function", "resizeMiniMapCanvas exists");
+    console.assert(typeof resizeRenderer === "function", "resizeRenderer exists");
     console.assert(cargoUsed() === 0, "Initial cargo is empty");
     console.assert(canStore(debrisTypes[0]) === true, "Small cargo fits in empty hold");
     assertFlightSteeringKeepsPitchAndRollZero();
@@ -867,14 +879,7 @@ function initializeWorld() {
     fireGrapple
   });
 
-  window.addEventListener("resize", () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    tacticalCamera.aspect = window.innerWidth / window.innerHeight;
-    tacticalCamera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    resizeMiniMapCanvas();
-  });
+  window.addEventListener("resize", resizeRenderer);
 
   ui.startBtn.addEventListener("click", resetRun);
   ui.restartBtn.addEventListener("click", resetRun);
@@ -885,7 +890,7 @@ function initializeWorld() {
   ui.repairBtn.addEventListener("click", repairHull);
   ui.refuelBtn.addEventListener("click", refuel);
 
-  resizeMiniMapCanvas();
+  resizeRenderer();
   spawnDebris(TUNING.debrisField.initialCount);
   runSelfTests();
   requestAnimationFrame(loop);
