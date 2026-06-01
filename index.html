@@ -1397,6 +1397,10 @@
       drawMiniMap();
     }
 
+    function getRepairCost() { return Math.ceil((Game.maxHull - Game.hull) * 0.6); }
+
+    function getFuelCost() { return Math.ceil((Game.maxFuel - Game.fuel) * 0.35); }
+
     function updateShopUI() {
       ui.shopMaterials.textContent = Game.materials;
       ui.shopCargoCap.textContent = Game.cargoCapacity;
@@ -1407,10 +1411,10 @@
       ui.buyCargoBtn.disabled = Game.credits < Game.upgradeCosts.cargo;
       ui.buyWorkbenchBtn.textContent = `Upgrade Processor (${Game.upgradeCosts.processor} CR)`;
       ui.buyWorkbenchBtn.disabled = Game.credits < Game.upgradeCosts.processor;
-      const repairCost = Math.ceil((Game.maxHull - Game.hull) * 0.6);
+      const repairCost = getRepairCost();
       ui.repairBtn.textContent = Game.hull >= Game.maxHull ? "Hull Full" : `Repair (${repairCost} CR)`;
       ui.repairBtn.disabled = Game.hull >= Game.maxHull || Game.credits < repairCost;
-      const fuelCost = Math.ceil((Game.maxFuel - Game.fuel) * 0.35);
+      const fuelCost = getFuelCost();
       ui.refuelBtn.textContent = Game.fuel >= Game.maxFuel ? "Fuel Full" : `Refuel (${fuelCost} CR)`;
       ui.refuelBtn.disabled = Game.fuel >= Game.maxFuel || Game.credits < fuelCost;
     }
@@ -1444,7 +1448,7 @@
     }
 
     function repairHull() {
-      const cost = Math.ceil((Game.maxHull - Game.hull) * 0.6);
+      const cost = getRepairCost();
       if (cost <= 0) return toast("Hull full");
       if (Game.credits < cost) return toast("Not enough credits");
       Game.credits -= cost;
@@ -1454,7 +1458,7 @@
     }
 
     function refuel() {
-      const cost = Math.ceil((Game.maxFuel - Game.fuel) * 0.35);
+      const cost = getFuelCost();
       if (cost <= 0) return toast("Fuel full");
       if (Game.credits < cost) return toast("Not enough credits");
       Game.credits -= cost;
