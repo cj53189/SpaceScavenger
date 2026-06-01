@@ -1,12 +1,12 @@
 # Space Scavenger Hybrid
 
-Space Scavenger Hybrid is currently a browser-based Three.js prototype in a single HTML file. It already supports the full core loop: walk inside the ship, sit in the pilot seat, fly in 2D tactical mode, grapple debris, store cargo, process materials, dock at the shop, upgrade, and repeat.
+Space Scavenger Hybrid is currently a browser-based Three.js prototype using native ES modules and Three.js from a CDN. It already supports the full core loop: walk inside the ship, sit in the pilot seat, fly in 2D tactical mode, grapple debris, store cargo, process materials, dock at the shop, upgrade, and repeat.
 
-This document is a safe development plan for improving the project without rewriting or removing working features.
+This document is a safe development plan for improving the project without rewriting or removing working features. The pure gameplay helper modules can also be checked with Node's built-in test runner, without adding a build system.
 
 ## 1. Main systems currently mixed together
 
-The single HTML file combines these systems:
+The app is partially modularized, but the main browser runtime still combines these systems:
 
 - **Page shell and HUD markup**: the canvas mount, crosshair, HUD panels, minimap canvas, start screen, shop screen, and end screen.
 - **Styling/theme**: all terminal-green visual styling, HUD layout, panels, overlays, buttons, minimap sizing, responsive rules, and prompts.
@@ -45,7 +45,10 @@ SpaceScavenger/
 └── src/
     ├── main.js              # bootstraps the app, registers events, starts loop
     ├── state.js             # createInitialGameState(), CargoState, runtime state
-    ├── config.js            # debrisTypes, tuning constants, upgrade formulas
+    ├── config.js            # debrisTypes and tuning constants
+    ├── math.js              # browser-independent math/time helpers
+    ├── debrisRules.js       # browser-independent debris weighting rules
+    ├── gameRules.js         # browser-independent cargo/economy/processor formulas
     ├── dom.js               # cached DOM references, toast(), log()
     ├── scene/
     │   ├── setupScene.js    # scene, renderer, cameras, groups, resize
@@ -93,7 +96,18 @@ Safe migration order:
    - Payoff: makes balance tuning safer and more beginner-friendly without changing mechanics.
    - Risk: low if values are copied exactly.
 
-## 5. Manual tests after each change
+
+## 5. Minimal automated tests
+
+Browser-independent helper coverage lives in `tests/` and uses Node's built-in test runner, so no bundler or build step is required.
+
+```sh
+npm test
+```
+
+The tests cover pure helpers such as `clamp`, `formatTime`, debris type weighting, cargo capacity checks, repair/refuel costs, upgrade costs, and processor duration/yield formulas. Browser and Three.js integration checks remain manual until the project has a fuller browser harness.
+
+## 6. Manual browser integration tests after each change
 
 After every small refactor, manually verify the full loop:
 
