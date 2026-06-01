@@ -351,20 +351,62 @@ function spawnDebris(count = 1, center = shipGroup.position) {
 }
 
 
+function setMode(nextMode, options = {}) {
+  const {
+    clearKeys = true,
+    captureFlightHeading = false,
+    interiorPosition = new THREE.Vector3(0, 1.6, -3.2)
+  } = options;
+  const isFlight = nextMode === "flight";
+  const isInterior = nextMode === "interior";
+  const isInteractive = isFlight || isInterior;
+
+  if (clearKeys) keys.clear();
+
+  if (!isInterior) {
+    safeExitPointerLock();
+    pointerLocked = false;
+  }
+
+  Game.mode = nextMode;
+  Game.fallbackLookActive = false;
+
+  ui.crosshair.classList.toggle("hidden", !isInteractive || isFlight);
+  renderer.domElement.style.cursor = isFlight ? "crosshair" : (isInterior && !Game.pointerLockDenied ? "crosshair" : "default");
+
+  flightGrid.visible = isFlight;
+  targetCone.visible = isFlight;
+  targetConeLine.visible = isFlight;
+  pilotSeat.visible = isInterior;
+
+  if (isFlight) {
+    shipGroup.position.y = 0;
+    shipVelocity.y = 0;
+    if (captureFlightHeading) {
+      Game.flightYaw = shipGroup.rotation.y;
+      Game.flightPitch = 0;
+    }
+    shipGroup.rotation.set(Game.flightPitch, Game.flightYaw, 0, "YXZ");
+    playerYaw.position.set(0, 1.6, -4.25);
+    playerYaw.rotation.set(0, 0, 0);
+    playerPitch.rotation.set(0, 0, 0);
+    updateTacticalCamera();
+  } else if (isInterior) {
+    playerYaw.position.copy(interiorPosition);
+    playerYaw.rotation.set(0, 0, 0);
+    playerPitch.rotation.set(0, 0, 0);
+    safeRequestPointerLock();
+  }
+}
+
+
 function resetGame() {
   Game.cargo.forEach(c => { if (c.mesh) shipGroup.remove(c.mesh); });
   resetGameState(Game);
-  flightGrid.visible = false;
-  targetCone.visible = false;
-  targetConeLine.visible = false;
-  pilotSeat.visible = true;
   releaseTether(false);
   shipGroup.position.set(0, 0, 0);
   shipGroup.rotation.set(0, 0, 0);
   shipVelocity.set(0, 0, 0);
-  playerYaw.position.set(0, 1.6, 2.4);
-  playerYaw.rotation.set(0, 0, 0);
-  playerPitch.rotation.set(0, 0, 0);
   debrisList.forEach(d => universeGroup.remove(d.mesh));
   debrisList.length = 0;
   cargoInteractables.length = 0;
@@ -372,9 +414,7 @@ function resetGame() {
   ui.startScreen.classList.add("hidden");
   ui.shopScreen.classList.add("hidden");
   ui.endScreen.classList.add("hidden");
-  ui.crosshair.classList.remove("hidden");
-  renderer.domElement.style.cursor = "crosshair";
-  safeRequestPointerLock();
+  setMode("interior", { interiorPosition: new THREE.Vector3(0, 1.6, 2.4) });
   log(Game.pointerLockDenied ? "Systems online. Hold right mouse to look around inside. Sit in the pilot seat for 2D flight." : "Systems online. Look at the blue pilot seat and press F to fly.");
 }
 
@@ -399,82 +439,34 @@ function fireGrapple(deb) {
 
 function enterFlightMode() {
   if (Game.carrying) return toast("Put cargo down first");
-  // Flight mode uses a visible 2D mouse cursor, not first-person pointer lock.
-  // Without this, the mouse stays locked after sitting down until Escape is pressed.
-  safeExitPointerLock();
-  pointerLocked = false;
-  Game.fallbackLookActive = false;
-  Game.mode = "flight";
-  flightGrid.visible = true;
-  targetCone.visible = true;
-  targetConeLine.visible = true;
-  pilotSeat.visible = false;
-  shipGroup.position.y = 0;
-  shipVelocity.y = 0;
-  Game.flightYaw = shipGroup.rotation.y;
-  Game.flightPitch = 0;
-  shipGroup.rotation.set(0, Game.flightYaw, 0, "YXZ");
-  playerYaw.position.set(0, 1.6, -4.25);
-  playerYaw.rotation.set(0, 0, 0);
-  playerPitch.rotation.set(0, 0, 0);
-  updateTacticalCamera();
-  renderer.domElement.style.cursor = "crosshair";
+  setMode("flight", { captureFlightHeading: true });
   log("Pilot controls engaged. 2D tactical flight: mouse aims, W thrust, S brake/reverse, click debris to grapple, scroll reels.");
 }
 
 function leavePilotSeat() {
-  Game.mode = "interior";
-  flightGrid.visible = false;
-  targetCone.visible = false;
-  targetConeLine.visible = false;
-  pilotSeat.visible = true;
   shipVelocity.set(0, 0, 0);
-  playerYaw.position.set(0, 1.6, -3.2);
-  playerYaw.rotation.set(0, 0, 0);
-  playerPitch.rotation.set(0, 0, 0);
+  setMode("interior", { interiorPosition: new THREE.Vector3(0, 1.6, -3.2) });
   log("Left pilot seat. Walk to cargo bay and processor.");
-  safeRequestPointerLock();
 }
 
 function openShop() {
   Game.modeBeforeShop = Game.mode;
-  Game.mode = "shop";
-  keys.clear();
-  Game.fallbackLookActive = false;
   releaseTether(false);
+  setMode("shop");
   updateShopUI();
   ui.shopScreen.classList.remove("hidden");
-  ui.crosshair.classList.add("hidden");
-  renderer.domElement.style.cursor = "default";
-  safeExitPointerLock();
   log("Docked at the salvage station network.");
 }
 
 function closeShop() {
   const returnMode = Game.modeBeforeShop === "flight" ? "flight" : "interior";
-  Game.mode = returnMode;
-  keys.clear();
-  Game.fallbackLookActive = false;
   ui.shopScreen.classList.add("hidden");
-  ui.crosshair.classList.remove("hidden");
-  renderer.domElement.style.cursor = Game.pointerLockDenied ? "default" : "crosshair";
+  setMode(returnMode, { interiorPosition: new THREE.Vector3(0, 1.6, -3.2) });
 
   if (returnMode === "flight") {
-    safeExitPointerLock();
-    pointerLocked = false;
-    flightGrid.visible = true;
-    pilotSeat.visible = false;
-    playerYaw.position.set(0, 1.6, -4.25);
-    playerYaw.rotation.set(0, 0, 0);
-    playerPitch.rotation.set(0, 0, 0);
-    shipGroup.rotation.set(Game.flightPitch, Game.flightYaw, 0, "YXZ");
-    updateTacticalCamera();
     log("Undocked. Still seated. Mouse aims the ship; W/S controls thrust.");
   } else {
-    flightGrid.visible = false;
-    pilotSeat.visible = true;
     log(Game.pointerLockDenied ? "Undocked. Hold right mouse to look around." : "Undocked. Back aboard the junker.");
-    safeRequestPointerLock();
   }
 }
 
@@ -762,14 +754,6 @@ function updateHUD() {
   ui.statusLamp.textContent = Game.hull < 30 ? "WARNING" : "ONLINE";
   ui.statusLamp.className = Game.hull < 30 ? "red" : "";
 
-  if (Game.mode === "shop" || Game.mode === "end") {
-    ui.crosshair.classList.add("hidden");
-    renderer.domElement.style.cursor = "default";
-  } else if (Game.running) {
-    ui.crosshair.classList.toggle("hidden", Game.mode === "flight");
-    renderer.domElement.style.cursor = Game.mode === "flight" ? "crosshair" : (Game.pointerLockDenied ? "default" : "crosshair");
-  }
-
   if (Game.mode === "interior") {
     ui.controlMode.textContent = Game.pointerLockDenied ? "DRAG LOOK" : "POINTER LOCK";
     ui.controlsText.innerHTML = Game.pointerLockDenied
@@ -789,14 +773,9 @@ function updateHUD() {
 
 
 function endGame(won, text) {
-  Game.mode = "end";
   Game.running = false;
-  keys.clear();
-  Game.fallbackLookActive = false;
   releaseTether(false);
-  safeExitPointerLock();
-  renderer.domElement.style.cursor = "default";
-  ui.crosshair.classList.add("hidden");
+  setMode("end");
   ui.endScreen.classList.remove("hidden");
   ui.shopScreen.classList.add("hidden");
   ui.endTitle.textContent = won ? "CONTRACT COMPLETE" : "CONTRACT FAILED";
@@ -878,11 +857,7 @@ window.addEventListener("resize", () => {
 });
 
 ui.startBtn.addEventListener("click", resetGame);
-ui.restartBtn.addEventListener("click", () => {
-  ui.crosshair.classList.remove("hidden");
-  renderer.domElement.style.cursor = "crosshair";
-  resetGame();
-});
+ui.restartBtn.addEventListener("click", resetGame);
 ui.undockBtn.addEventListener("click", closeShop);
 ui.sellMaterialsBtn.addEventListener("click", sellMaterials);
 ui.buyCargoBtn.addEventListener("click", buyCargo);
