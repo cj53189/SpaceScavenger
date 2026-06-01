@@ -673,13 +673,28 @@ function drawHeldCargo() {
   } else mesh.visible = false;
 }
 
+function resizeMiniMapCanvas() {
+  const width = ui.miniMap.clientWidth;
+  const height = ui.miniMap.clientHeight;
+  const pixelRatio = window.devicePixelRatio || 1;
+  const backingWidth = Math.round(width * pixelRatio);
+  const backingHeight = Math.round(height * pixelRatio);
+
+  if (miniMapCanvas.width !== backingWidth) miniMapCanvas.width = backingWidth;
+  if (miniMapCanvas.height !== backingHeight) miniMapCanvas.height = backingHeight;
+  miniMapCtx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+  return { width, height };
+}
+
 function drawMiniMap() {
   const box = ui.miniMap;
   box.style.display = Game.mode === "flight" && Game.running ? "block" : "none";
   if (Game.mode !== "flight" || !Game.running) return;
 
-  const w = miniMapCanvas.width;
-  const h = miniMapCanvas.height;
+  const { width: w, height: h } = resizeMiniMapCanvas();
+  if (!w || !h) return;
+
   const cx = w / 2;
   const cy = h / 2;
   const range = 650;
@@ -812,6 +827,7 @@ function runSelfTests() {
   console.assert(typeof safeRequestPointerLock === "function", "safeRequestPointerLock exists");
   console.assert(typeof updateTacticalCamera === "function", "updateTacticalCamera exists");
   console.assert(typeof mouseWorldOnFlightPlane === "function", "mouseWorldOnFlightPlane exists");
+  console.assert(typeof resizeMiniMapCanvas === "function", "resizeMiniMapCanvas exists");
   console.assert(cargoUsed() === 0, "Initial cargo is empty");
   console.assert(canStore(debrisTypes[0]) === true, "Small cargo fits in empty hold");
   Game.flightYaw = 0.75;
@@ -856,6 +872,7 @@ window.addEventListener("resize", () => {
   tacticalCamera.aspect = window.innerWidth / window.innerHeight;
   tacticalCamera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  resizeMiniMapCanvas();
 });
 
 ui.startBtn.addEventListener("click", resetGame);
@@ -867,6 +884,7 @@ ui.buyWorkbenchBtn.addEventListener("click", buyProcessor);
 ui.repairBtn.addEventListener("click", repairHull);
 ui.refuelBtn.addEventListener("click", refuel);
 
+resizeMiniMapCanvas();
 spawnDebris(32);
 runSelfTests();
 requestAnimationFrame(loop);
