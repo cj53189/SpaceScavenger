@@ -29,7 +29,6 @@ The single HTML file combines these systems:
 - **Cargo removal does not dispose geometry/materials**: debris and cargo meshes are removed from the scene, but geometry/material disposal is not centralized. This is acceptable for a prototype, but longer sessions or future content could leak GPU resources.
 - **DOM lookups are repeated every frame**: `updateHUD()` and related functions repeatedly call `$()` for the same elements. It is simple but fragile because a typo only fails at runtime and repeated lookups make the HUD harder to split later.
 - **Magic numbers are spread through gameplay code**: movement speeds, room bounds, camera height, fuel costs, debris radii, station docking range, collision ranges, processing formulas, and upgrade formulas live directly inside functions.
-- **Self-tests mutate live state**: `runSelfTests()` changes `Game.flightYaw` and `shipGroup.rotation`. The current assertions restore enough to be harmless at startup, but future tests should use helpers or restore all changed state explicitly.
 - **Pointer-lock fallback and cursor state are intertwined with UI state**: pointer lock, drag-look fallback, cursor style, and control text are changed from several places, making browser/sandbox behavior harder to reason about.
 - **Shop/economy UI and economy rules are coupled**: cost formulas and purchase effects live beside button text and disabled-state updates, which makes balance changes riskier than necessary.
 
