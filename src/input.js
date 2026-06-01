@@ -1,3 +1,4 @@
+import { TUNING } from "./config.js";
 import { Game } from "./state.js";
 import { toast, log, ui } from "./dom.js";
 import { canStore, pickUpCargo, putCargoBack } from "./cargo.js";
@@ -121,9 +122,9 @@ export function registerInputHandlers({
     if (Game.mode !== "flight" || !Game.tether.active || !Game.tether.debris) return;
     e.preventDefault();
     const cargoCanFit = canStore(Game.tether.debris.type);
-    const minLength = cargoCanFit ? Game.tether.storeDistance * 0.65 : Game.tether.fullCargoSafeLength;
+    const minLength = cargoCanFit ? TUNING.tether.storeDistance * 0.65 : TUNING.tether.fullCargoSafeLength;
     const amount = e.deltaY > 0 ? -8 : 8;
-    Game.tether.length = clamp(Game.tether.length + amount, minLength, Game.tether.maxLength);
+    Game.tether.length = clamp(Game.tether.length + amount, minLength, TUNING.tether.maxLength);
     if (!cargoCanFit && Game.tether.length <= minLength) {
       toast("Cargo full: intake locked");
       log("Cargo hold full. You can tow debris, but the winch will not pull it into the ship.");

@@ -1,14 +1,4 @@
-import {
-  debrisTypes,
-  targetConeRange,
-  targetConeHalfAngle,
-  debrisFieldRadius,
-  debrisDespawnRadius,
-  minDebrisCount,
-  debrisVisualYRange,
-  intakeSafetyRadius,
-  intakeFieldRadius
-} from "./config.js";
+import { TUNING, debrisTypes, targetConeRange, targetConeHalfAngle } from "./config.js";
 import { ui, miniMapCanvas, miniMapCtx, toast, log } from "./dom.js";
 import { Game, resetGameState } from "./state.js";
 import { registerInputHandlers } from "./input.js";
@@ -292,7 +282,7 @@ function findMouseDebrisTarget() {
   if (hits.length) {
     const hit = hits[0].object;
     const deb = debrisList.find(d => d.mesh === hit);
-    if (deb && flatDistance(shipGroup.position, deb.mesh.position) <= Game.tether.maxLength) return deb;
+    if (deb && flatDistance(shipGroup.position, deb.mesh.position) <= TUNING.tether.maxLength) return deb;
   }
 
   // Priority 2: forward salvage-scan cone. This matches the ship-window logic:
@@ -304,7 +294,7 @@ function findMouseDebrisTarget() {
     if (!isWorldPointVisible(deb.mesh.position, 90)) return;
     const offset = deb.mesh.position.clone().sub(shipGroup.position).setY(0);
     const distance = offset.length();
-    if (distance < 1 || distance > Game.tether.maxLength) return;
+    if (distance < 1 || distance > TUNING.tether.maxLength) return;
     const dir = offset.clone().normalize();
     const angle = Math.acos(clamp(forward.dot(dir), -1, 1));
     if (angle > targetConeHalfAngle) return;
@@ -336,12 +326,12 @@ function clearDebris() {
 function spawnDebris(count = 1, center = shipGroup.position) {
   for (let i = 0; i < count; i++) {
     const type = chooseDebrisType();
-    const dist = rand(180, debrisFieldRadius);
+    const dist = rand(180, TUNING.debrisField.radius);
     const theta = rand(0, Math.PI * 2);
     const mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(type.size, 0), makeMat(type.color));
     mesh.position.set(
       center.x + dist * Math.cos(theta),
-      rand(-debrisVisualYRange, debrisVisualYRange),
+      rand(-TUNING.debrisField.visualYRange, TUNING.debrisField.visualYRange),
       center.z + dist * Math.sin(theta)
     );
     mesh.userData.kind = "debrisMesh";
@@ -415,7 +405,7 @@ function resetRun() {
   shipVelocity.set(0, 0, 0);
   clearDebris();
   cargoInteractables.length = 0;
-  spawnDebris(32);
+  spawnDebris(TUNING.debrisField.initialCount);
   ui.startScreen.classList.add("hidden");
   ui.shopScreen.classList.add("hidden");
   ui.endScreen.classList.add("hidden");
@@ -433,7 +423,7 @@ function releaseTether(show = true) {
 
 function fireGrapple(deb) {
   const distance = flatDistance(shipGroup.position, deb.mesh.position);
-  if (distance > Game.tether.maxLength) return toast("Out of tether range");
+  if (distance > TUNING.tether.maxLength) return toast("Out of tether range");
   Game.tether.active = true;
   Game.tether.debris = deb;
   Game.tether.length = distance;
@@ -477,7 +467,7 @@ function closeShop() {
 
 
 function updateInterior(dt) {
-  const speed = Game.carrying ? 3.9 : 5.4;
+  const speed = Game.carrying ? TUNING.interior.carryingSpeed : TUNING.interior.walkSpeed;
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(playerYaw.quaternion);
   const right = new THREE.Vector3(1, 0, 0).applyQuaternion(playerYaw.quaternion);
   forward.y = 0; right.y = 0; forward.normalize(); right.normalize();
@@ -488,9 +478,9 @@ function updateInterior(dt) {
   if (keys.has("d")) move.add(right);
   if (move.lengthSq() > 0) move.normalize().multiplyScalar(speed * dt);
   playerYaw.position.add(move);
-  playerYaw.position.x = clamp(playerYaw.position.x, -4.4, 4.4);
-  playerYaw.position.z = clamp(playerYaw.position.z, -6.55, 6.55);
-  playerYaw.position.y = 1.6;
+  playerYaw.position.x = clamp(playerYaw.position.x, TUNING.interior.bounds.minX, TUNING.interior.bounds.maxX);
+  playerYaw.position.z = clamp(playerYaw.position.z, TUNING.interior.bounds.minZ, TUNING.interior.bounds.maxZ);
+  playerYaw.position.y = TUNING.interior.bounds.y;
   if (Game.carrying) {
     const processorWorld = new THREE.Vector3();
     processor.getWorldPosition(processorWorld);
@@ -504,23 +494,23 @@ function updateFlight(dt) {
 
   const forward = forwardFlatVector();
   if (keys.has("w") && Game.fuel > 0) {
-    shipVelocity.add(forward.clone().multiplyScalar(38 * dt));
-    Game.fuel = Math.max(0, Game.fuel - 5.5 * dt);
+    shipVelocity.add(forward.clone().multiplyScalar(TUNING.flight.thrust * dt));
+    Game.fuel = Math.max(0, Game.fuel - TUNING.flight.thrustFuelUse * dt);
   }
   if (keys.has("s") && Game.fuel > 0) {
-    shipVelocity.add(forward.clone().multiplyScalar(-20 * dt));
-    Game.fuel = Math.max(0, Game.fuel - 2.8 * dt);
+    shipVelocity.add(forward.clone().multiplyScalar(-TUNING.flight.brake * dt));
+    Game.fuel = Math.max(0, Game.fuel - TUNING.flight.brakeFuelUse * dt);
   }
-  if (!keys.has("w") && !keys.has("s")) Game.fuel = Math.min(Game.maxFuel, Game.fuel + 1.0 * dt);
+  if (!keys.has("w") && !keys.has("s")) Game.fuel = Math.min(Game.maxFuel, Game.fuel + TUNING.flight.idleFuelRecharge * dt);
 
   shipVelocity.y = 0;
-  shipVelocity.multiplyScalar(0.992);
-  if (shipVelocity.length() > 72) shipVelocity.setLength(72);
+  shipVelocity.multiplyScalar(TUNING.flight.drag);
+  if (shipVelocity.length() > TUNING.flight.maxSpeed) shipVelocity.setLength(TUNING.flight.maxSpeed);
 
   shipGroup.position.add(shipVelocity.clone().multiplyScalar(dt));
   shipGroup.position.y = 0;
 
-  Game.nearStation = flatDistance(shipGroup.position, station.position) < 120;
+  Game.nearStation = flatDistance(shipGroup.position, station.position) < TUNING.flight.stationDockingRange;
   updateTether(dt);
   updateTacticalCamera();
 }
@@ -531,37 +521,37 @@ function updateTether(dt) {
   if (!Game.tether.active || !Game.tether.debris) return;
   const deb = Game.tether.debris;
   if (!debrisList.includes(deb)) { releaseTether(false); return; }
-  if (!canStore(deb.type) && Game.tether.length < Game.tether.fullCargoSafeLength) Game.tether.length = Game.tether.fullCargoSafeLength;
+  if (!canStore(deb.type) && Game.tether.length < TUNING.tether.fullCargoSafeLength) Game.tether.length = TUNING.tether.fullCargoSafeLength;
 
   const intake = getCargoIntakeWorld();
   intake.y = 0;
   const toIntake = intake.clone().sub(deb.mesh.position).setY(0);
   const dist = Math.max(0.1, toIntake.length());
-  if (dist > Game.tether.maxLength * 1.35) {
+  if (dist > TUNING.tether.maxLength * TUNING.tether.snapLengthMultiplier) {
     toast("Tether snapped");
     releaseTether();
     return;
   }
   if (dist > Game.tether.length) {
-    const force = (dist - Game.tether.length) * Game.tether.pullStrength * dt;
+    const force = (dist - Game.tether.length) * TUNING.tether.pullStrength * dt;
     const dir = toIntake.normalize();
     deb.velocity.add(dir.clone().multiplyScalar(force / deb.type.mass));
     shipVelocity.add(dir.clone().multiplyScalar(-force * 0.035));
   }
   deb.velocity.y = 0;
-  const stabilized = Game.tether.length <= intakeFieldRadius || dist <= intakeSafetyRadius;
+  const stabilized = Game.tether.length <= TUNING.intake.fieldRadius || dist <= TUNING.intake.safetyRadius;
   // The intake zone should prevent unfair hull damage, not make the debris
   // feel like it is stuck in syrup. Keep normal tether drag so reeling stays responsive.
   deb.velocity.multiplyScalar(0.988);
   if (stabilized) {
     const guide = toIntake.lengthSq() > 0 ? toIntake.clone().normalize() : new THREE.Vector3();
-    deb.velocity.add(guide.multiplyScalar(22 * dt));
+    deb.velocity.add(guide.multiplyScalar(TUNING.intake.guideStrength * dt));
   }
-  const winchedIn = Game.tether.length <= Game.tether.storeDistance;
-  if (winchedIn && dist <= Game.tether.captureDistance && canStore(deb.type)) {
+  const winchedIn = Game.tether.length <= TUNING.tether.storeDistance;
+  if (winchedIn && dist <= TUNING.tether.captureDistance && canStore(deb.type)) {
     const dir = toIntake.normalize();
-    deb.velocity.add(dir.clone().multiplyScalar(Game.tether.capturePull * dt));
-    if (dist <= Game.tether.storeDistance + 2) {
+    deb.velocity.add(dir.clone().multiplyScalar(TUNING.tether.capturePull * dt));
+    if (dist <= TUNING.tether.storeDistance + 2) {
       addCargoToShip(deb.type);
       removeAndDispose(universeGroup, deb.mesh);
       const i = debrisList.indexOf(deb);
@@ -580,12 +570,12 @@ function maintainDebrisField() {
   for (let i = debrisList.length - 1; i >= 0; i--) {
     const deb = debrisList[i];
     if (Game.tether.active && Game.tether.debris === deb) continue;
-    if (flatDistance(deb.mesh.position, shipGroup.position) > debrisDespawnRadius) {
+    if (flatDistance(deb.mesh.position, shipGroup.position) > TUNING.debrisField.despawnRadius) {
       removeAndDispose(universeGroup, deb.mesh);
       debrisList.splice(i, 1);
     }
   }
-  if (debrisList.length < minDebrisCount) spawnDebris(minDebrisCount - debrisList.length, shipGroup.position);
+  if (debrisList.length < TUNING.debrisField.minCount) spawnDebris(TUNING.debrisField.minCount - debrisList.length, shipGroup.position);
 }
 
 function updateDebris(dt) {
@@ -596,21 +586,21 @@ function updateDebris(dt) {
     deb.mesh.rotation.y += deb.spin.y;
     deb.mesh.rotation.z += deb.spin.z;
     const dist = flatDistance(deb.mesh.position, shipGroup.position);
-    if (Game.mode === "flight" && dist < 5.5) {
+    if (Game.mode === "flight" && dist < TUNING.collision.radius) {
       const tethered = Game.tether.active && Game.tether.debris === deb;
-      const stabilized = tethered && (Game.tether.length <= intakeFieldRadius || dist <= intakeSafetyRadius);
+      const stabilized = tethered && (Game.tether.length <= TUNING.intake.fieldRadius || dist <= TUNING.intake.safetyRadius);
       const relativeSpeed = shipVelocity.distanceTo(deb.velocity);
-      const rawDamage = Math.round(3 + deb.type.mass * relativeSpeed * 0.08);
+      const rawDamage = Math.round(TUNING.collision.baseDamage + deb.type.mass * relativeSpeed * TUNING.collision.massSpeedDamageMultiplier);
       const damage = stabilized ? 0 : rawDamage;
       if (stabilized) {
         // Controlled cargo should not punish the player with catastrophic impact damage.
         // No bounce here either, because bounce makes the final reel-in feel worse.
-        if (rawDamage > 10) log(`Intake field controlled ${deb.type.name}. No hull damage.`);
-      } else if (damage > 4) {
+        if (rawDamage > TUNING.collision.highRawDamageLogThreshold) log(`Intake field controlled ${deb.type.name}. No hull damage.`);
+      } else if (damage > TUNING.collision.damageThreshold) {
         Game.hull = Math.max(0, Game.hull - damage);
         const bounce = deb.mesh.position.clone().sub(shipGroup.position).setY(0).normalize();
-        deb.velocity.add(bounce.clone().multiplyScalar(10));
-        shipVelocity.add(bounce.clone().multiplyScalar(-2));
+        deb.velocity.add(bounce.clone().multiplyScalar(TUNING.collision.debrisBounce));
+        shipVelocity.add(bounce.clone().multiplyScalar(-TUNING.collision.shipBounce));
         log(`Impact with ${deb.type.name}. Hull damage: ${damage}.`);
         if (Game.hull <= 0) endGame(false, "Your ship shattered against space junk.");
       }
@@ -649,7 +639,7 @@ function updateTargets() {
     if (Game.tether.active && Game.tether.debris) {
       const canFit = canStore(Game.tether.debris.type);
       Game.prompt = canFit
-        ? `Tethered ${Game.tether.debris.type.name} · winch ${Math.round(Game.tether.length)}m · scroll to reel · ${Game.tether.length <= intakeFieldRadius ? "INTAKE SHIELD ACTIVE" : ""}`
+        ? `Tethered ${Game.tether.debris.type.name} · winch ${Math.round(Game.tether.length)}m · scroll to reel · ${Game.tether.length <= TUNING.intake.fieldRadius ? "INTAKE SHIELD ACTIVE" : ""}`
         : `Cargo full: towing ${Game.tether.debris.type.name}, intake locked`;
     } else if (Game.nearStation) Game.prompt = "[E] Dock / access station shop";
     else if (!Game.prompt) Game.prompt = "[F] Leave pilot seat";
@@ -912,7 +902,7 @@ function initializeWorld() {
   ui.refuelBtn.addEventListener("click", refuel);
 
   resizeMiniMapCanvas();
-  spawnDebris(32);
+  spawnDebris(TUNING.debrisField.initialCount);
   runSelfTests();
   requestAnimationFrame(loop);
 }

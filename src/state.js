@@ -32,13 +32,7 @@ export function createGameState() {
     tether: {
       active: false,
       debris: null,
-      length: 0,
-      maxLength: 300,
-      storeDistance: 26,
-      captureDistance: 38,
-      fullCargoSafeLength: 75,
-      pullStrength: 10,
-      capturePull: 18
+      length: 0
     }
   };
 }

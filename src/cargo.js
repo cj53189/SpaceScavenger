@@ -1,3 +1,4 @@
+import { TUNING } from "./config.js";
 import { Game, CargoState } from "./state.js";
 import { toast, log } from "./dom.js";
 import { removeAndDispose } from "./scene/dispose.js";
@@ -83,7 +84,10 @@ export function startProcessing(cargo) {
   cargo.state = CargoState.PROCESSING;
   Game.carrying = null;
   cargo.progress = 0;
-  cargo.duration = 1.8 + cargo.type.cargoSize * 1.65 + cargo.type.mass * 0.25 + cargo.type.danger * 2;
+  cargo.duration = TUNING.processor.durationBase
+    + cargo.type.cargoSize * TUNING.processor.durationCargoSizeMultiplier
+    + cargo.type.mass * TUNING.processor.durationMassMultiplier
+    + cargo.type.danger * TUNING.processor.durationDangerMultiplier;
   Game.processing = cargo;
   toast(`Processing ${cargo.type.name}`);
   log(`${cargo.type.name} loaded into processor. Larger cargo takes longer.`);
@@ -93,12 +97,12 @@ export function processCargo(dt) {
   const { processor } = requireDeps();
   const cargo = Game.processing;
   if (!cargo) return;
-  const speed = 1 + (Game.processorLevel - 1) * 0.28;
+  const speed = 1 + (Game.processorLevel - 1) * TUNING.processor.speedPerLevel;
   cargo.progress += (dt * speed) / cargo.duration;
   processor.material.opacity = 0.6 + Math.sin(Game.elapsed * 10) * 0.25;
   processor.material.transparent = true;
   if (cargo.progress >= 1) {
-    const gained = Math.round(cargo.type.material * (1 + (Game.processorLevel - 1) * 0.18));
+    const gained = Math.round(cargo.type.material * (1 + (Game.processorLevel - 1) * TUNING.processor.yieldPerLevel));
     Game.materials += gained;
     toast(`Processed +${gained} materials`);
     log(`${cargo.type.name} processed into ${gained} materials.`);
