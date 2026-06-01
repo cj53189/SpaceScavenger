@@ -1,5 +1,6 @@
 import { Game, CargoState } from "./state.js";
 import { toast, log } from "./dom.js";
+import { removeAndDispose } from "./scene/dispose.js";
 
 let deps;
 let nextCargoId = 1;
@@ -37,7 +38,7 @@ export function addCargoToShip(type) {
 export function removeCargoMesh(cargo) {
   const { shipGroup, cargoInteractables } = requireDeps();
   if (!cargo.mesh) return;
-  shipGroup.remove(cargo.mesh);
+  removeAndDispose(shipGroup, cargo.mesh);
   const i = cargoInteractables.indexOf(cargo.mesh);
   if (i >= 0) cargoInteractables.splice(i, 1);
   cargo.mesh = null;
