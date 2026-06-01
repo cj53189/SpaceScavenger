@@ -308,7 +308,53 @@
     "use strict";
 
     const $ = (id) => document.getElementById(id);
-    const miniMapCanvas = $("miniMapCanvas");
+    const ui = {
+      scene: $("scene"),
+      crosshair: $("crosshair"),
+      miniMap: $("miniMap"),
+      miniMapCanvas: $("miniMapCanvas"),
+      centerPrompt: $("centerPrompt"),
+      toast: $("toast"),
+      startScreen: $("startScreen"),
+      shopScreen: $("shopScreen"),
+      endScreen: $("endScreen"),
+      startHelp: $("startHelp"),
+      modeTitle: $("modeTitle"),
+      statusLamp: $("statusLamp"),
+      uiCredits: $("uiCredits"),
+      uiScore: $("uiScore"),
+      uiGoal: $("uiGoal"),
+      uiCargo: $("uiCargo"),
+      uiMaterials: $("uiMaterials"),
+      uiSpeed: $("uiSpeed"),
+      hullBar: $("hullBar"),
+      fuelBar: $("fuelBar"),
+      controlMode: $("controlMode"),
+      controlsText: $("controlsText"),
+      objectiveText: $("objectiveText"),
+      shipLog: $("shipLog"),
+      timer: $("timer"),
+      shopMaterials: $("shopMaterials"),
+      shopCargoCap: $("shopCargoCap"),
+      shopWorkbench: $("shopWorkbench"),
+      sellMaterialsBtn: $("sellMaterialsBtn"),
+      buyCargoBtn: $("buyCargoBtn"),
+      buyWorkbenchBtn: $("buyWorkbenchBtn"),
+      repairBtn: $("repairBtn"),
+      refuelBtn: $("refuelBtn"),
+      endTitle: $("endTitle"),
+      endText: $("endText"),
+      startBtn: $("startBtn"),
+      restartBtn: $("restartBtn"),
+      undockBtn: $("undockBtn")
+    };
+    const missingUi = Object.entries(ui)
+      .filter(([, element]) => !element)
+      .map(([key]) => key);
+    if (missingUi.length) {
+      console.error(`Missing UI elements: ${missingUi.join(", ")}`);
+    }
+    const miniMapCanvas = ui.miniMapCanvas;
     const miniMapCtx = miniMapCanvas.getContext("2d");
 
     const Game = {
@@ -382,7 +428,7 @@
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.8));
     renderer.setSize(window.innerWidth, window.innerHeight);
-    $("scene").appendChild(renderer.domElement);
+    ui.scene.appendChild(renderer.domElement);
 
     const universeGroup = new THREE.Group();
     scene.add(universeGroup);
@@ -416,20 +462,20 @@
     }
 
     function toast(message) {
-      const t = $("toast");
+      const t = ui.toast;
       t.textContent = message;
       t.classList.add("show");
       clearTimeout(toast.timer);
       toast.timer = setTimeout(() => t.classList.remove("show"), 1400);
     }
 
-    function log(message) { $("shipLog").textContent = message; }
+    function log(message) { ui.shipLog.textContent = message; }
 
     function setPointerLockFallback(reason) {
       Game.pointerLockDenied = true;
       pointerLocked = false;
-      $("controlMode").textContent = "DRAG LOOK";
-      $("startHelp").textContent = "Pointer lock is blocked in this sandbox. Hold right mouse and drag to look inside the ship. Flight mode still uses visible mouse aiming.";
+      ui.controlMode.textContent = "DRAG LOOK";
+      ui.startHelp.textContent = "Pointer lock is blocked in this sandbox. Hold right mouse and drag to look inside the ship. Flight mode still uses visible mouse aiming.";
       log("Pointer lock blocked. Drag-look fallback enabled for interior mode.");
       if (reason) console.warn("Pointer lock fallback:", reason);
     }
@@ -466,7 +512,7 @@
       pointerLocked = document.pointerLockElement === document.body;
       if (pointerLocked) {
         Game.pointerLockDenied = false;
-        $("controlMode").textContent = "POINTER LOCK";
+        ui.controlMode.textContent = "POINTER LOCK";
       }
     });
 
@@ -853,10 +899,10 @@
       debrisList.length = 0;
       cargoInteractables.length = 0;
       spawnDebris(32);
-      $("startScreen").classList.add("hidden");
-      $("shopScreen").classList.add("hidden");
-      $("endScreen").classList.add("hidden");
-      $("crosshair").classList.remove("hidden");
+      ui.startScreen.classList.add("hidden");
+      ui.shopScreen.classList.add("hidden");
+      ui.endScreen.classList.add("hidden");
+      ui.crosshair.classList.remove("hidden");
       renderer.domElement.style.cursor = "crosshair";
       safeRequestPointerLock();
       log(Game.pointerLockDenied ? "Systems online. Hold right mouse to look around inside. Sit in the pilot seat for 2D flight." : "Systems online. Look at the blue pilot seat and press F to fly.");
@@ -988,8 +1034,8 @@
       Game.fallbackLookActive = false;
       releaseTether(false);
       updateShopUI();
-      $("shopScreen").classList.remove("hidden");
-      $("crosshair").classList.add("hidden");
+      ui.shopScreen.classList.remove("hidden");
+      ui.crosshair.classList.add("hidden");
       renderer.domElement.style.cursor = "default";
       safeExitPointerLock();
       log("Docked at the salvage station network.");
@@ -1000,8 +1046,8 @@
       Game.mode = returnMode;
       keys.clear();
       Game.fallbackLookActive = false;
-      $("shopScreen").classList.add("hidden");
-      $("crosshair").classList.remove("hidden");
+      ui.shopScreen.classList.add("hidden");
+      ui.crosshair.classList.remove("hidden");
       renderer.domElement.style.cursor = Game.pointerLockDenied ? "default" : "crosshair";
 
       if (returnMode === "flight") {
@@ -1188,7 +1234,7 @@
       Game.prompt = "";
       Game.targetedObject = null;
       Game.targetedDebris = null;
-      $("crosshair").classList.remove("active");
+      ui.crosshair.classList.remove("active");
 
       if (Game.mode === "interior") {
         raycaster.setFromCamera(center, camera);
@@ -1197,7 +1243,7 @@
         if (hits.length && hits[0].distance < 4.2) {
           const obj = hits[0].object;
           Game.targetedObject = obj;
-          $("crosshair").classList.add("active");
+          ui.crosshair.classList.add("active");
           if (obj.userData.kind === "pilot") Game.prompt = "[F] Sit in pilot seat";
           else if (obj.userData.kind === "storage") Game.prompt = "Storage locker";
           else if (obj.userData.kind === "processor") Game.prompt = Game.processing ? `Processing ${Game.processing.type.name}` : Game.carrying ? `Walk cargo into processor` : "Processor: carry cargo here";
@@ -1208,7 +1254,7 @@
         const deb = findMouseDebrisTarget();
         if (deb) {
           Game.targetedDebris = deb;
-          $("crosshair").classList.add("active");
+          ui.crosshair.classList.add("active");
           const d = Math.round(flatDistance(shipGroup.position, deb.mesh.position));
           Game.prompt = `[Click] Grapple ${deb.type.name} · ${d}m`;
         }
@@ -1244,7 +1290,7 @@
     }
 
     function drawMiniMap() {
-      const box = $("miniMap");
+      const box = ui.miniMap;
       box.style.display = Game.mode === "flight" && Game.running ? "block" : "none";
       if (Game.mode !== "flight" || !Game.running) return;
 
@@ -1311,62 +1357,62 @@
     }
 
     function updateHUD() {
-      $("modeTitle").textContent = Game.mode === "interior" ? "INTERIOR" : Game.mode === "flight" ? "PILOTING" : Game.mode === "shop" ? "DOCKED" : "END";
-      $("uiCredits").textContent = Game.credits;
-      $("uiScore").textContent = Game.score;
-      $("uiGoal").textContent = Game.goal;
-      $("uiCargo").textContent = `${cargoUsed()}/${Game.cargoCapacity}`;
-      $("uiMaterials").textContent = Game.materials;
-      $("uiSpeed").textContent = Math.round(shipVelocity.length());
-      $("timer").textContent = formatTime(Game.elapsed);
-      $("hullBar").style.width = `${(Game.hull / Game.maxHull) * 100}%`;
-      $("hullBar").style.background = Game.hull < 30 ? "var(--red)" : "var(--green)";
-      $("fuelBar").style.width = `${(Game.fuel / Game.maxFuel) * 100}%`;
-      $("fuelBar").style.background = Game.fuel < 25 ? "var(--yellow)" : "var(--cyan)";
-      $("statusLamp").textContent = Game.hull < 30 ? "WARNING" : "ONLINE";
-      $("statusLamp").className = Game.hull < 30 ? "red" : "";
+      ui.modeTitle.textContent = Game.mode === "interior" ? "INTERIOR" : Game.mode === "flight" ? "PILOTING" : Game.mode === "shop" ? "DOCKED" : "END";
+      ui.uiCredits.textContent = Game.credits;
+      ui.uiScore.textContent = Game.score;
+      ui.uiGoal.textContent = Game.goal;
+      ui.uiCargo.textContent = `${cargoUsed()}/${Game.cargoCapacity}`;
+      ui.uiMaterials.textContent = Game.materials;
+      ui.uiSpeed.textContent = Math.round(shipVelocity.length());
+      ui.timer.textContent = formatTime(Game.elapsed);
+      ui.hullBar.style.width = `${(Game.hull / Game.maxHull) * 100}%`;
+      ui.hullBar.style.background = Game.hull < 30 ? "var(--red)" : "var(--green)";
+      ui.fuelBar.style.width = `${(Game.fuel / Game.maxFuel) * 100}%`;
+      ui.fuelBar.style.background = Game.fuel < 25 ? "var(--yellow)" : "var(--cyan)";
+      ui.statusLamp.textContent = Game.hull < 30 ? "WARNING" : "ONLINE";
+      ui.statusLamp.className = Game.hull < 30 ? "red" : "";
 
       if (Game.mode === "shop" || Game.mode === "end") {
-        $("crosshair").classList.add("hidden");
+        ui.crosshair.classList.add("hidden");
         renderer.domElement.style.cursor = "default";
       } else if (Game.running) {
-        $("crosshair").classList.toggle("hidden", Game.mode === "flight");
+        ui.crosshair.classList.toggle("hidden", Game.mode === "flight");
         renderer.domElement.style.cursor = Game.mode === "flight" ? "crosshair" : (Game.pointerLockDenied ? "default" : "crosshair");
       }
 
       if (Game.mode === "interior") {
-        $("controlMode").textContent = Game.pointerLockDenied ? "DRAG LOOK" : "POINTER LOCK";
-        $("controlsText").innerHTML = Game.pointerLockDenied
+        ui.controlMode.textContent = Game.pointerLockDenied ? "DRAG LOOK" : "POINTER LOCK";
+        ui.controlsText.innerHTML = Game.pointerLockDenied
           ? "WASD walk · Hold right mouse + drag look · F sit in pilot seat · Left-click cargo pick up/drop"
           : "WASD walk · Mouse look · F sit in pilot seat · Click cargo pick up/drop";
-        $("objectiveText").innerHTML = "Use the pilot seat to fly. Cargo appears in the yellow bay. Pick it up close-range and carry it into the purple processor.";
+        ui.objectiveText.innerHTML = "Use the pilot seat to fly. Cargo appears in the yellow bay. Pick it up close-range and carry it into the purple processor.";
       } else if (Game.mode === "flight") {
-        $("controlMode").textContent = "2D MOUSE";
-        $("controlsText").innerHTML = "Visible mouse aims · W thrust · S brake/reverse · Left-click debris grapple/release · Scroll reel · F stand up";
-        $("objectiveText").innerHTML = "2D tactical flight. The scanner cone is shorter now and only assists with visible debris, so it should stop grabbing off-screen targets.";
+        ui.controlMode.textContent = "2D MOUSE";
+        ui.controlsText.innerHTML = "Visible mouse aims · W thrust · S brake/reverse · Left-click debris grapple/release · Scroll reel · F stand up";
+        ui.objectiveText.innerHTML = "2D tactical flight. The scanner cone is shorter now and only assists with visible debris, so it should stop grabbing off-screen targets.";
       }
-      const cp = $("centerPrompt");
+      const cp = ui.centerPrompt;
       cp.textContent = Game.prompt;
       cp.style.display = Game.prompt ? "block" : "none";
       drawMiniMap();
     }
 
     function updateShopUI() {
-      $("shopMaterials").textContent = Game.materials;
-      $("shopCargoCap").textContent = Game.cargoCapacity;
-      $("shopWorkbench").textContent = Game.processorLevel;
-      $("sellMaterialsBtn").textContent = Game.materials > 0 ? `Sell +${Game.materials} CR` : "No Materials";
-      $("sellMaterialsBtn").disabled = Game.materials <= 0;
-      $("buyCargoBtn").textContent = `Upgrade Cargo (${Game.upgradeCosts.cargo} CR)`;
-      $("buyCargoBtn").disabled = Game.credits < Game.upgradeCosts.cargo;
-      $("buyWorkbenchBtn").textContent = `Upgrade Processor (${Game.upgradeCosts.processor} CR)`;
-      $("buyWorkbenchBtn").disabled = Game.credits < Game.upgradeCosts.processor;
+      ui.shopMaterials.textContent = Game.materials;
+      ui.shopCargoCap.textContent = Game.cargoCapacity;
+      ui.shopWorkbench.textContent = Game.processorLevel;
+      ui.sellMaterialsBtn.textContent = Game.materials > 0 ? `Sell +${Game.materials} CR` : "No Materials";
+      ui.sellMaterialsBtn.disabled = Game.materials <= 0;
+      ui.buyCargoBtn.textContent = `Upgrade Cargo (${Game.upgradeCosts.cargo} CR)`;
+      ui.buyCargoBtn.disabled = Game.credits < Game.upgradeCosts.cargo;
+      ui.buyWorkbenchBtn.textContent = `Upgrade Processor (${Game.upgradeCosts.processor} CR)`;
+      ui.buyWorkbenchBtn.disabled = Game.credits < Game.upgradeCosts.processor;
       const repairCost = Math.ceil((Game.maxHull - Game.hull) * 0.6);
-      $("repairBtn").textContent = Game.hull >= Game.maxHull ? "Hull Full" : `Repair (${repairCost} CR)`;
-      $("repairBtn").disabled = Game.hull >= Game.maxHull || Game.credits < repairCost;
+      ui.repairBtn.textContent = Game.hull >= Game.maxHull ? "Hull Full" : `Repair (${repairCost} CR)`;
+      ui.repairBtn.disabled = Game.hull >= Game.maxHull || Game.credits < repairCost;
       const fuelCost = Math.ceil((Game.maxFuel - Game.fuel) * 0.35);
-      $("refuelBtn").textContent = Game.fuel >= Game.maxFuel ? "Fuel Full" : `Refuel (${fuelCost} CR)`;
-      $("refuelBtn").disabled = Game.fuel >= Game.maxFuel || Game.credits < fuelCost;
+      ui.refuelBtn.textContent = Game.fuel >= Game.maxFuel ? "Fuel Full" : `Refuel (${fuelCost} CR)`;
+      ui.refuelBtn.disabled = Game.fuel >= Game.maxFuel || Game.credits < fuelCost;
     }
 
     function sellMaterials() {
@@ -1425,12 +1471,12 @@
       releaseTether(false);
       safeExitPointerLock();
       renderer.domElement.style.cursor = "default";
-      $("crosshair").classList.add("hidden");
-      $("endScreen").classList.remove("hidden");
-      $("shopScreen").classList.add("hidden");
-      $("endTitle").textContent = won ? "CONTRACT COMPLETE" : "CONTRACT FAILED";
-      $("endTitle").style.color = won ? "var(--green)" : "var(--red)";
-      $("endText").textContent = text;
+      ui.crosshair.classList.add("hidden");
+      ui.endScreen.classList.remove("hidden");
+      ui.shopScreen.classList.add("hidden");
+      ui.endTitle.textContent = won ? "CONTRACT COMPLETE" : "CONTRACT FAILED";
+      ui.endTitle.style.color = won ? "var(--green)" : "var(--red)";
+      ui.endText.textContent = text;
     }
 
     function loop(now) {
@@ -1479,18 +1525,18 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    $("startBtn").addEventListener("click", resetGame);
-    $("restartBtn").addEventListener("click", () => {
-      $("crosshair").classList.remove("hidden");
+    ui.startBtn.addEventListener("click", resetGame);
+    ui.restartBtn.addEventListener("click", () => {
+      ui.crosshair.classList.remove("hidden");
       renderer.domElement.style.cursor = "crosshair";
       resetGame();
     });
-    $("undockBtn").addEventListener("click", closeShop);
-    $("sellMaterialsBtn").addEventListener("click", sellMaterials);
-    $("buyCargoBtn").addEventListener("click", buyCargo);
-    $("buyWorkbenchBtn").addEventListener("click", buyProcessor);
-    $("repairBtn").addEventListener("click", repairHull);
-    $("refuelBtn").addEventListener("click", refuel);
+    ui.undockBtn.addEventListener("click", closeShop);
+    ui.sellMaterialsBtn.addEventListener("click", sellMaterials);
+    ui.buyCargoBtn.addEventListener("click", buyCargo);
+    ui.buyWorkbenchBtn.addEventListener("click", buyProcessor);
+    ui.repairBtn.addEventListener("click", repairHull);
+    ui.refuelBtn.addEventListener("click", refuel);
 
     spawnDebris(32);
     runSelfTests();
