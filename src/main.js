@@ -822,21 +822,38 @@ function loop(now) {
   renderer.render(scene, activeCamera);
 }
 
+function assertFlightSteeringKeepsPitchAndRollZero() {
+  const savedFlightYaw = Game.flightYaw;
+  const savedFlightPitch = Game.flightPitch;
+  const savedShipRotation = shipGroup.rotation.clone();
+
+  try {
+    Game.flightYaw = 0.75;
+    Game.flightPitch = 0;
+    shipGroup.rotation.set(0, Game.flightYaw, 0, "YXZ");
+    console.assert(Math.abs(shipGroup.rotation.x) < 0.000001 && Math.abs(shipGroup.rotation.z) < 0.000001, "Flight steering keeps pitch and roll at zero");
+  } finally {
+    Game.flightYaw = savedFlightYaw;
+    Game.flightPitch = savedFlightPitch;
+    shipGroup.rotation.copy(savedShipRotation);
+  }
+}
+
 function runSelfTests() {
   console.group("Space Scavenger Hybrid self-tests");
-  console.assert(typeof safeRequestPointerLock === "function", "safeRequestPointerLock exists");
-  console.assert(typeof updateTacticalCamera === "function", "updateTacticalCamera exists");
-  console.assert(typeof mouseWorldOnFlightPlane === "function", "mouseWorldOnFlightPlane exists");
-  console.assert(typeof resizeMiniMapCanvas === "function", "resizeMiniMapCanvas exists");
-  console.assert(cargoUsed() === 0, "Initial cargo is empty");
-  console.assert(canStore(debrisTypes[0]) === true, "Small cargo fits in empty hold");
-  Game.flightYaw = 0.75;
-  Game.flightPitch = 0;
-  shipGroup.rotation.set(0, Game.flightYaw, 0, "YXZ");
-  console.assert(Math.abs(shipGroup.rotation.x) < 0.000001 && Math.abs(shipGroup.rotation.z) < 0.000001, "Flight steering keeps pitch and roll at zero");
-  console.assert(room.material[2].transparent === false && room.material[3].transparent === false && room.material[4].transparent === false, "Ceiling, floor, and rear wall are opaque");
-  console.assert(pilotSeat.visible === true, "Pilot seat starts visible before piloting");
-  console.groupEnd();
+  try {
+    console.assert(typeof safeRequestPointerLock === "function", "safeRequestPointerLock exists");
+    console.assert(typeof updateTacticalCamera === "function", "updateTacticalCamera exists");
+    console.assert(typeof mouseWorldOnFlightPlane === "function", "mouseWorldOnFlightPlane exists");
+    console.assert(typeof resizeMiniMapCanvas === "function", "resizeMiniMapCanvas exists");
+    console.assert(cargoUsed() === 0, "Initial cargo is empty");
+    console.assert(canStore(debrisTypes[0]) === true, "Small cargo fits in empty hold");
+    assertFlightSteeringKeepsPitchAndRollZero();
+    console.assert(room.material[2].transparent === false && room.material[3].transparent === false && room.material[4].transparent === false, "Ceiling, floor, and rear wall are opaque");
+    console.assert(pilotSeat.visible === true, "Pilot seat starts visible before piloting");
+  } finally {
+    console.groupEnd();
+  }
 }
 
 configureCargo({
