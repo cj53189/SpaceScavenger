@@ -29,6 +29,7 @@ import {
   repairHull,
   refuel
 } from "./economy.js";
+import { removeAndDispose } from "./scene/dispose.js";
 
 const { THREE } = window;
 
@@ -401,13 +402,13 @@ function setMode(nextMode, options = {}) {
 
 
 function resetGame() {
-  Game.cargo.forEach(c => { if (c.mesh) shipGroup.remove(c.mesh); });
+  Game.cargo.forEach(c => { if (c.mesh) removeAndDispose(shipGroup, c.mesh); });
   resetGameState(Game);
   releaseTether(false);
   shipGroup.position.set(0, 0, 0);
   shipGroup.rotation.set(0, 0, 0);
   shipVelocity.set(0, 0, 0);
-  debrisList.forEach(d => universeGroup.remove(d.mesh));
+  debrisList.forEach(d => removeAndDispose(universeGroup, d.mesh));
   debrisList.length = 0;
   cargoInteractables.length = 0;
   spawnDebris(32);
@@ -558,13 +559,14 @@ function updateTether(dt) {
     deb.velocity.add(dir.clone().multiplyScalar(Game.tether.capturePull * dt));
     if (dist <= Game.tether.storeDistance + 2) {
       addCargoToShip(deb.type);
-      universeGroup.remove(deb.mesh);
+      removeAndDispose(universeGroup, deb.mesh);
       const i = debrisList.indexOf(deb);
       if (i >= 0) debrisList.splice(i, 1);
       releaseTether(false);
       spawnDebris(1);
       toast("Cargo secured");
       log(`${deb.type.name} reeled into cargo bay. Leave the seat and process it.`);
+      return;
     }
   }
   tetherLine.geometry.setFromPoints([intake, deb.mesh.position]);
@@ -575,7 +577,7 @@ function maintainDebrisField() {
     const deb = debrisList[i];
     if (Game.tether.active && Game.tether.debris === deb) continue;
     if (flatDistance(deb.mesh.position, shipGroup.position) > debrisDespawnRadius) {
-      universeGroup.remove(deb.mesh);
+      removeAndDispose(universeGroup, deb.mesh);
       debrisList.splice(i, 1);
     }
   }
