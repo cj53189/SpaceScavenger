@@ -1,3 +1,4 @@
+import { TUNING } from "./config.js";
 import { Game } from "./state.js";
 import { ui, toast } from "./dom.js";
 
@@ -52,8 +53,8 @@ export function sellMaterials() {
 export function buyCargo() {
   if (Game.credits < Game.upgradeCosts.cargo) return toast("Not enough credits");
   Game.credits -= Game.upgradeCosts.cargo;
-  Game.cargoCapacity += 2;
-  Game.upgradeCosts.cargo = Math.floor(Game.upgradeCosts.cargo * 1.6 + 20);
+  Game.cargoCapacity += TUNING.upgrades.cargo.capacityIncrease;
+  Game.upgradeCosts.cargo = Math.floor(Game.upgradeCosts.cargo * TUNING.upgrades.cargo.costMultiplier + TUNING.upgrades.cargo.costFlatIncrease);
   updateShopUI();
   toast("Cargo expanded");
 }
@@ -61,8 +62,8 @@ export function buyCargo() {
 export function buyProcessor() {
   if (Game.credits < Game.upgradeCosts.processor) return toast("Not enough credits");
   Game.credits -= Game.upgradeCosts.processor;
-  Game.processorLevel++;
-  Game.upgradeCosts.processor = Math.floor(Game.upgradeCosts.processor * 1.7 + 25);
+  Game.processorLevel += TUNING.upgrades.processor.levelIncrease;
+  Game.upgradeCosts.processor = Math.floor(Game.upgradeCosts.processor * TUNING.upgrades.processor.costMultiplier + TUNING.upgrades.processor.costFlatIncrease);
   updateShopUI();
   toast("Processor upgraded");
 }
