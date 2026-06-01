@@ -328,6 +328,11 @@ function updateTacticalCamera() {
   tacticalCamera.lookAt(shipGroup.position.x, 0, shipGroup.position.z);
 }
 
+function clearDebris() {
+  debrisList.forEach(d => removeAndDispose(universeGroup, d.mesh));
+  debrisList.length = 0;
+}
+
 function spawnDebris(count = 1, center = shipGroup.position) {
   for (let i = 0; i < count; i++) {
     const type = chooseDebrisType();
@@ -401,15 +406,14 @@ function setMode(nextMode, options = {}) {
 }
 
 
-function resetGame() {
+function resetRun() {
   Game.cargo.forEach(c => { if (c.mesh) removeAndDispose(shipGroup, c.mesh); });
   resetGameState(Game);
   releaseTether(false);
   shipGroup.position.set(0, 0, 0);
   shipGroup.rotation.set(0, 0, 0);
   shipVelocity.set(0, 0, 0);
-  debrisList.forEach(d => removeAndDispose(universeGroup, d.mesh));
-  debrisList.length = 0;
+  clearDebris();
   cargoInteractables.length = 0;
   spawnDebris(32);
   ui.startScreen.classList.add("hidden");
@@ -856,52 +860,61 @@ function runSelfTests() {
   }
 }
 
-configureCargo({
-  THREE,
-  makeMat,
-  rand,
-  shipGroup,
-  playerYaw,
-  cargoInteractables,
-  processor
-});
-configureEconomy({ formatTime, endGame });
-registerInputHandlers({
-  keys,
-  getPointerLocked: () => pointerLocked,
-  setPointerLocked: (value) => { pointerLocked = value; },
-  setPointerLockFallback,
-  safeRequestPointerLock,
-  applyLookDelta,
-  closeShop,
-  openShop,
-  enterFlightMode,
-  leavePilotSeat,
-  releaseTether,
-  findMouseDebrisTarget,
-  fireGrapple,
-  clamp
-});
+let worldInitialized = false;
 
-window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  tacticalCamera.aspect = window.innerWidth / window.innerHeight;
-  tacticalCamera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+function initializeWorld() {
+  if (worldInitialized) return;
+  worldInitialized = true;
+
+  configureCargo({
+    THREE,
+    makeMat,
+    rand,
+    shipGroup,
+    playerYaw,
+    cargoInteractables,
+    processor
+  });
+  configureEconomy({ formatTime, endGame });
+  registerInputHandlers({
+    keys,
+    getPointerLocked: () => pointerLocked,
+    setPointerLocked: (value) => { pointerLocked = value; },
+    setPointerLockFallback,
+    safeRequestPointerLock,
+    applyLookDelta,
+    closeShop,
+    openShop,
+    enterFlightMode,
+    leavePilotSeat,
+    releaseTether,
+    findMouseDebrisTarget,
+    fireGrapple,
+    clamp
+  });
+
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    tacticalCamera.aspect = window.innerWidth / window.innerHeight;
+    tacticalCamera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    resizeMiniMapCanvas();
+  });
+
+  ui.startBtn.addEventListener("click", resetRun);
+  ui.restartBtn.addEventListener("click", resetRun);
+  ui.undockBtn.addEventListener("click", closeShop);
+  ui.sellMaterialsBtn.addEventListener("click", sellMaterials);
+  ui.buyCargoBtn.addEventListener("click", buyCargo);
+  ui.buyWorkbenchBtn.addEventListener("click", buyProcessor);
+  ui.repairBtn.addEventListener("click", repairHull);
+  ui.refuelBtn.addEventListener("click", refuel);
+
   resizeMiniMapCanvas();
-});
+  spawnDebris(32);
+  runSelfTests();
+  requestAnimationFrame(loop);
+}
 
-ui.startBtn.addEventListener("click", resetGame);
-ui.restartBtn.addEventListener("click", resetGame);
-ui.undockBtn.addEventListener("click", closeShop);
-ui.sellMaterialsBtn.addEventListener("click", sellMaterials);
-ui.buyCargoBtn.addEventListener("click", buyCargo);
-ui.buyWorkbenchBtn.addEventListener("click", buyProcessor);
-ui.repairBtn.addEventListener("click", repairHull);
-ui.refuelBtn.addEventListener("click", refuel);
-
-resizeMiniMapCanvas();
-spawnDebris(32);
-runSelfTests();
-requestAnimationFrame(loop);
+initializeWorld();
