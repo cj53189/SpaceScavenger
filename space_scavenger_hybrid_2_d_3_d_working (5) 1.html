@@ -308,6 +308,47 @@
     "use strict";
 
     const $ = (id) => document.getElementById(id);
+    const cachedUiIds = [
+      "scene",
+      "crosshair",
+      "statusLamp",
+      "modeTitle",
+      "objectiveText",
+      "hullBar",
+      "fuelBar",
+      "uiCredits",
+      "uiScore",
+      "uiGoal",
+      "uiMaterials",
+      "uiCargo",
+      "uiSpeed",
+      "controlMode",
+      "controlsText",
+      "timer",
+      "shipLog",
+      "centerPrompt",
+      "toast",
+      "miniMap",
+      "miniMapCanvas",
+      "startScreen",
+      "startBtn",
+      "startHelp",
+      "shopScreen",
+      "shopMaterials",
+      "sellMaterialsBtn",
+      "shopCargoCap",
+      "buyCargoBtn",
+      "shopWorkbench",
+      "buyWorkbenchBtn",
+      "repairBtn",
+      "refuelBtn",
+      "undockBtn",
+      "endScreen",
+      "endTitle",
+      "endText",
+      "restartBtn"
+    ];
+    const missingUi = cachedUiIds.filter((id) => $(id) === null);
     const miniMapCanvas = $("miniMapCanvas");
     const miniMapCtx = miniMapCanvas.getContext("2d");
 
@@ -1460,6 +1501,7 @@
       console.assert(typeof safeRequestPointerLock === "function", "safeRequestPointerLock exists");
       console.assert(typeof updateTacticalCamera === "function", "updateTacticalCamera exists");
       console.assert(typeof mouseWorldOnFlightPlane === "function", "mouseWorldOnFlightPlane exists");
+      console.assert(missingUi.length === 0, "All cached UI elements exist");
       console.assert(cargoUsed() === 0, "Initial cargo is empty");
       console.assert(canStore(debrisTypes[0]) === true, "Small cargo fits in empty hold");
       Game.flightYaw = 0.75;
