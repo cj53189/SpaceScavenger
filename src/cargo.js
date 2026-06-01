@@ -22,16 +22,23 @@ export function canStore(type) {
   return cargoUsed() + type.cargoSize <= Game.cargoCapacity;
 }
 
-export function addCargoToShip(type) {
-  const { THREE, makeMat, rand, shipGroup, cargoInteractables } = requireDeps();
-  const cargo = { id: nextCargoId++, type, state: CargoState.STORED, mesh: null, progress: 0 };
-  const size = type.cargoSize > 1 ? 0.95 : 0.72;
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), makeMat(type.color));
-  mesh.position.set(-3.2 + rand(-1, 1), 0.55, 4.8 + rand(-1, 1));
+function createCargoMesh(cargo, position) {
+  const { THREE, makeMat, shipGroup, cargoInteractables } = requireDeps();
+  const size = cargo.type.cargoSize > 1 ? 0.95 : 0.72;
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), makeMat(cargo.type.color));
+  mesh.position.copy(position);
   mesh.userData = { kind: "cargo", cargo };
   cargo.mesh = mesh;
   shipGroup.add(mesh);
   cargoInteractables.push(mesh);
+  return mesh;
+}
+
+export function addCargoToShip(type) {
+  const { THREE, rand } = requireDeps();
+  const cargo = { id: nextCargoId++, type, state: CargoState.STORED, mesh: null, progress: 0 };
+  const position = new THREE.Vector3(-3.2 + rand(-1, 1), 0.55, 4.8 + rand(-1, 1));
+  createCargoMesh(cargo, position);
   Game.cargo.push(cargo);
 }
 
@@ -59,19 +66,14 @@ export function pickUpCargo(cargo) {
 }
 
 export function putCargoBack() {
-  const { THREE, makeMat, shipGroup, playerYaw, cargoInteractables } = requireDeps();
+  const { THREE, playerYaw } = requireDeps();
   const cargo = Game.carrying;
   if (!cargo) return;
   cargo.state = CargoState.STORED;
-  const size = cargo.type.cargoSize > 1 ? 0.95 : 0.72;
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), makeMat(cargo.type.color));
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(playerYaw.quaternion);
-  mesh.position.copy(playerYaw.position).add(forward.multiplyScalar(1.25));
-  mesh.position.y = 0.55;
-  mesh.userData = { kind: "cargo", cargo };
-  cargo.mesh = mesh;
-  shipGroup.add(mesh);
-  cargoInteractables.push(mesh);
+  const position = playerYaw.position.clone().add(forward.multiplyScalar(1.25));
+  position.y = 0.55;
+  createCargoMesh(cargo, position);
   Game.carrying = null;
   log(`${cargo.type.name} placed back in the ship.`);
 }
